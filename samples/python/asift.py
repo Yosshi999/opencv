@@ -83,7 +83,7 @@ def affine_detect(detector, img, mask=None, pool=None):
 
     def f(p):
         t, phi = p
-        timg, tmask, Ai = affine_skew(t, phi, img)
+        timg, tmask, Ai = affine_skew(t, phi, img, mask)
         keypoints, descrs = detector.detectAndCompute(timg, tmask)
         for kp in keypoints:
             x, y = kp.pt
