@@ -25,30 +25,33 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         perspectiveTransform(Mat(points0), points0t, H);
 
     matches.clear();
-    vector<uchar> usedMask(keypoints1.size(), 0);
+    vector<DMatch> allMatches;
+    allMatches.reserve(keypoints0.size() * keypoints1.size());
+    vector<bool> usedMask0(keypoints0.size(), false);
+    vector<bool> usedMask1(keypoints1.size(), false);
     for(int i0 = 0; i0 < static_cast<int>(keypoints0.size()); i0++)
     {
-        int nearestPointIndex = -1;
-        float maxIntersectRatio = 0.f;
         const float r0 =  0.5f * keypoints0[i0].size;
         for(size_t i1 = 0; i1 < keypoints1.size(); i1++)
         {
-            if(nearestPointIndex >= 0 && usedMask[i1])
-                continue;
-
             float r1 = 0.5f * keypoints1[i1].size;
             float intersectRatio = calcIntersectRatio(points0t.at<Point2f>(i0), r0,
                                                       keypoints1[i1].pt, r1);
-            if(intersectRatio > maxIntersectRatio)
-            {
-                maxIntersectRatio = intersectRatio;
-                nearestPointIndex = static_cast<int>(i1);
-            }
+            allMatches.emplace_back(i0, static_cast<int>(i1), intersectRatio);
         }
-
-        matches.push_back(DMatch(i0, nearestPointIndex, maxIntersectRatio));
-        if(nearestPointIndex >= 0)
-            usedMask[nearestPointIndex] = 1;
+    }
+    std::sort(allMatches.begin(), allMatches.end(), [](const DMatch& left, const DMatch& right)
+    {
+        return left.distance > right.distance;
+    });
+    for(size_t m = 0; m < allMatches.size(); m++)
+    {
+        DMatch& match = allMatches[m];
+        if(usedMask0[match.queryIdx] || usedMask1[match.trainIdx])
+            continue;
+        matches.push_back(match);
+        usedMask0[match.queryIdx] = true;
+        usedMask1[match.trainIdx] = true;
     }
 }
 
